@@ -16,7 +16,9 @@ class AplicacaoDiscovery(app_manager.RyuApp):
     def __init__(self, *args, **kwargs):
         super(AplicacaoDiscovery, self).__init__(*args, **kwargs)
         self.rede = {}
-        self.spanning_tree = SpanningTree(self.rede,self.logger)
+        '''
+        Precisamos de dependencias auxiliares?
+        '''
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def tratador_switch_features(self, ev):
@@ -70,18 +72,10 @@ class AplicacaoDiscovery(app_manager.RyuApp):
         # previne problemas de ordem de registro de switch e recebimento de PacketIn
         self.rede.setdefault(id_enlace,{})
 
-        if origem not in self.rede[id_enlace]:
-            self.rede[id_enlace][origem] = porta_entrante
-            self.logger.info("novo HOST registrado: %s\nREDE:\n%s", origem,self.rede)
-            self.spanning_tree.atualizar_mapa_rede(self.rede)
+        '''
+        Instalar fluxos para rotas desconecidas
+        '''
         
-        if self.rede and destino in self.rede[id_enlace]:
-            caminho = self.spanning_tree.menor_caminho(id_enlace,destino)
-            proximo_mac = caminho[caminho.index(id_enlace) + 1]
-            porta_saida = self.rede[id_enlace][proximo_mac]
-        else:
-           porta_saida = protocolo_open_flow.OFPP_FLOOD
-
         acao = [decodificador.OFPActionOutput(porta_saida)]
 
         # instalando fluxos, nao havera mais packet in se o estado da rede se mantiver estavel
@@ -110,43 +104,20 @@ class AplicacaoDiscovery(app_manager.RyuApp):
 
     @set_ev_cls(event.EventLinkAdd)
     def registrar_link(self, ev):
-        self.logger.info(ev.link.src)
-        link = ev.link
-        if link.src.dpid not in self.rede:
-            self.rede[link.src.dpid] = {}
-        if link.dst.dpid not in self.rede:
-            self.rede[link.dst.dpid] = {}
-        self.rede[link.src.dpid][link.dst.dpid] = link.src.port_no
-        self.rede[link.dst.dpid][link.src.dpid] = link.dst.port_no
-        self.logger.info('novo LINK encontrado: %s -> %s\nREDE:\n%s', link.src.dpid, link.dst.dpid, self.rede)
-        self.spanning_tree.atualizar_mapa_rede(self.rede)
+        '''
+        Novo Link criado entre switches
+        '''
 
     @set_ev_cls(ofp_event.EventOFPPortStatus, MAIN_DISPATCHER)
     def port_status_handler(self, ev):
-        enlace = ev.msg.datapath
-        porta = ev.msg.desc
-        # Porta esta DOWN?
-        if porta.state == 1:
-            protocolo_open_flow = enlace.ofproto
-            decodificador = enlace.ofproto_parser
-            # Evitar resposta Excecao caso um enlace nao tenha associacao
-            self.rede.setdefault(enlace.id, {})
-            # Remover destinos associados
-            for destino in self.rede[enlace.id].keys():
-                self.logger.info('[ControladorL2Learning]---> removendo destino %s',destino)
-                mascara_de_busca = decodificador.OFPMatch(eth_dst=destino)
-                remover_destino = decodificador.OFPFlowMod(enlace, command=protocolo_open_flow.OFPFC_DELETE,
-                                                            out_port=protocolo_open_flow.OFPP_ANY, 
-                                                            out_group=protocolo_open_flow.OFPG_ANY,
-                                                            priority=1, match=mascara_de_busca)
-                enlace.send_msg(remover_destino)
-                del self.rede[enlace.id][destino]
-        self.spanning_tree.atualizar_mapa_rede(self.rede)
+        self
+        '''
+        Mundanca de estado da porta
+        '''
 
     @set_ev_cls(event.EventSwitchLeave)
     def remover_switch(self, ev):
-        enlace = ev.switch.dp
-        if enlace in self.rede[enlace.id]:
-            del self.rede[enlace.id]
-        self.logger.info('SWITCH removido: %s\nREDE:\n%s', enlace.id, self.rede)
-        self.spanning_tree.atualizar_mapa_rede(self.rede)
+        self
+        '''
+        Switch novo entra na rede
+        '''

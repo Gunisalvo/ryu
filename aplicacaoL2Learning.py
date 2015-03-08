@@ -9,6 +9,7 @@ class AplicacaoL2Learning(ControladorBase):
 
     def __init__(self, *args, **kwargs):
         super(AplicacaoL2Learning, self).__init__(*args, **kwargs)
+    # Mapa de estados da rede
         self.mapa_rede = {}
 
     @set_ev_cls(ofp_event.EventOFPPacketIn, MAIN_DISPATCHER)
@@ -28,6 +29,7 @@ class AplicacaoL2Learning(ControladorBase):
 
     # Empacotar dados do PacketIN como pacote de rede
         pacote = packet.Packet(mensagem.data)
+    # No cabecalho podemos checar os dados Ethernet padrao, como endereco de origem, endereco de destino, tipo de pacote, etc...
         cabecalho_ethernet = pacote.get_protocols(ethernet.ethernet)[0]
 
         destino = cabecalho_ethernet.dst
@@ -95,7 +97,7 @@ class AplicacaoL2Learning(ControladorBase):
 
     @set_ev_cls(ofp_event.EventOFPStateChange,DEAD_DISPATCHER)
     def tratador_conexao_switch(self, ev):
-        # Evento de queda de conexao
+    # Evento de queda de conexao
         enlace = ev.datapath
         if enlace.id in self.mapa_rede:
             self.logger.info('[ControladorL2Learning]---> removendo enlace %s',enlace.id)
