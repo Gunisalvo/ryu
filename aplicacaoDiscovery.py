@@ -104,6 +104,7 @@ class AplicacaoDiscovery(app_manager.RyuApp):
 
     @set_ev_cls(event.EventLinkAdd)
     def registrar_link(self, ev):
+        self
         '''
         Novo Link criado entre switches
         '''

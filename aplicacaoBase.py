@@ -8,6 +8,7 @@ from ryu.lib.packet import ethernet
 from ryu.lib import hub
 
 class AplicacaoBase(app_manager.RyuApp):
+    
     OFP_VERSIONS = [ofproto_v1_3.OFP_VERSION]
 
     def __init__(self, *args, **kwargs):
@@ -23,14 +24,16 @@ class AplicacaoBase(app_manager.RyuApp):
 
     @set_ev_cls(ofp_event.EventOFPSwitchFeatures, CONFIG_DISPATCHER)
     def tratador_switch_features(self, ev):
-        #controlador recebe a resposta com as configuracoes do switch
+        #controlador recebe a resposta com as configuracoes do switch, 
+        #como nao existe comportamento padrao temos que dizer quais pacotes deverao ser enviados ao controlador
         self.logger.info('[ControladorBase]---> FeatureRequest recebido de: %s', ev.msg.datapath.id)
         enlace = ev.msg.datapath
         protocolo_open_flow = enlace.ofproto
         decodificador = enlace.ofproto_parser
         mascara_de_busca = decodificador.OFPMatch()
         acoes = [decodificador.OFPActionOutput(protocolo_open_flow.OFPP_CONTROLLER, protocolo_open_flow.OFPCML_NO_BUFFER)]
-        # neste caso esta instalando uma tabela da fluxo vazia com prioridade 0
+        # neste caso esta instalando uma tabela da fluxo vazia com prioridade 0 
+        # tambem dizemos que TODOS os pacotes desconhecidos devem ser enviados ao contolador
         self.instala_fluxo(enlace, 0, mascara_de_busca, acoes)
 
     @set_ev_cls(ofp_event.EventOFPStateChange,[MAIN_DISPATCHER, DEAD_DISPATCHER])
